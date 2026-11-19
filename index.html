@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SafeTrust Security Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Libre+Caslon+Text:wght@400;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* VOICE work: a security operations console for a viva demo, precise and calm
+   IDEA a bank's storage-security test bench: a network map, a switch panel of controls, an incident log
+   PICTURE live SafeTrust architecture map; each attack draws its route in red and stops at the control that blocks it
+   COLOUR white ground, ink #14161a, deep teal #0b5d63 = protected, red = breached, amber = detected, blue = recovered
+   TYPE Libre Caslon Text for titles, Inter for everything else, system mono for captured evidence
+   LAYOUT laptop: title + scorecard across the top, map (2/3) beside control panel (1/3), console, register, data, audit below; phone: stacked title, map, attacks, controls */
+:root{color-scheme:light dark;--bg:light-dark(#ffffff,#0d1416);--ink:light-dark(#14161a,#e7eef0);--mute:light-dark(#5b6168,#9aa7ab);--rule:light-dark(#dde1e3,#24323a);--panel:light-dark(#f4f7f7,#131e22);--teal:light-dark(#0b5d63,#5cc6c0);--tealbg:light-dark(#e3f1f1,#11302f);--red:light-dark(#b3261e,#ff7a6e);--redbg:light-dark(#fbe9e7,#3a1715);--amber:light-dark(#9a5a00,#f0b25a);--amberbg:light-dark(#fdf1de,#382a12);--blue:light-dark(#2f4b9a,#93aaff);--bluebg:light-dark(#e7ecfa,#18213d);--zone:light-dark(#f7f9f9,#10191c)}
+:root[data-theme=light]{color-scheme:light}
+:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+html{scroll-padding-top:20px}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 Inter,system-ui,sans-serif;overflow-x:clip}
+h1,h2{font-family:"Libre Caslon Text",Georgia,serif;font-weight:700;letter-spacing:-.02em;line-height:1.05;margin:0}
+h1{font-size:clamp(32px,4.4vw,48px);text-wrap:balance}
+h2{font-size:clamp(24px,2.6vw,30px);margin-bottom:6px}
+p{margin:0}
+.band{padding-block:clamp(22px,3vw,40px);padding-inline:max(4vw,16px)}
+.wrap{max-width:1240px;margin:0 auto}
+.top{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:24px;align-items:end;border-bottom:1px solid var(--rule)}
+.lede{color:var(--mute);margin-top:12px;max-width:62ch}
+.score{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.score div{padding:10px 12px;border-radius:8px;background:var(--panel)}
+.score b{display:block;font-size:clamp(26px,3vw,34px);line-height:1.1;font-variant-numeric:tabular-nums}
+.score span{font-size:13px;color:var(--mute)}
+.s-br b{color:var(--red)}.s-de b{color:var(--amber)}.s-re b{color:var(--blue)}.s-bl b{color:var(--teal)}
+.lab{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(0,1fr);gap:20px;align-items:start}
+.fig{position:relative;height:clamp(320px,38vw,420px);border:1px solid var(--rule);border-radius:10px;overflow:hidden;background:var(--bg)}
+.fig>svg{position:absolute;inset:0;width:100%;height:100%}
+svg text{font:13px Inter,system-ui,sans-serif;fill:var(--ink);paint-order:stroke;stroke:var(--bg);stroke-width:4px}
+.status{margin-top:10px;min-height:48px;padding:10px 14px;border-radius:8px;background:var(--panel);font-size:15px}
+.attacks{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px;margin-top:12px}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible+.sw,select:focus-visible,input[type=number]:focus-visible{outline:3px solid var(--teal);outline-offset:2px}
+.atk{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;min-height:64px;padding:10px 12px;border:1px solid var(--rule);border-radius:8px;background:var(--bg)}
+.atk:hover{border-color:var(--ink)}
+.atk:disabled{opacity:.55;cursor:wait}
+.atk strong{font-size:15px;font-weight:600}
+.atk small{font-size:13px;color:var(--mute)}
+.chip{display:inline-block;font-size:12.5px;font-weight:600;padding:1px 8px;border-radius:99px;white-space:nowrap}
+.c-breached{background:var(--redbg);color:var(--red)}.c-detected{background:var(--amberbg);color:var(--amber)}.c-recovered{background:var(--bluebg);color:var(--blue)}.c-blocked{background:var(--tealbg);color:var(--teal)}.c-none{background:var(--panel);color:var(--mute)}
+.row{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.btn{min-height:44px;padding:8px 16px;border-radius:8px;border:1px solid var(--ink);background:var(--ink);color:var(--bg);font-weight:600}
+.btn.ghost{background:transparent;color:var(--ink)}
+.btn:disabled{opacity:.5;cursor:wait}
+.panel{border:1px solid var(--rule);border-radius:10px;padding:16px;background:var(--panel)}
+.panel h3{font-size:15px;margin:14px 0 4px;color:var(--mute);font-weight:600}
+.panel h3:first-of-type{margin-top:6px}
+.tg{display:flex;align-items:center;gap:12px;min-height:46px;padding:4px 0;border-top:1px solid var(--rule);cursor:pointer}
+.tg input{position:absolute;opacity:0;width:1px;height:1px}
+.sw{flex:none;width:42px;height:24px;border-radius:99px;background:light-dark(#c7cdd0,#3a4a50);position:relative;transition:background .15s}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:transform .15s}
+.tg input:checked+.sw{background:var(--teal)}
+.tg input:checked+.sw::after{transform:translateX(18px)}
+.tg span:last-child{font-size:15px;line-height:1.3}
+.tg em{display:block;font-style:normal;font-size:13px;color:var(--mute)}
+.totp{margin-top:10px;padding:10px 12px;border-radius:8px;background:var(--bg);font-size:14px;border:1px solid var(--rule)}
+.totp b{font:600 22px ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.08em;color:var(--teal)}
+.presets{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.presets button{min-height:40px;padding:6px 12px;border-radius:8px;border:1px solid var(--rule);background:var(--bg);font-size:14px}
+.presets button:hover{border-color:var(--ink)}
+.cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px}
+.steps{list-style:none;margin:10px 0 0;padding:0;border-top:1px solid var(--rule)}
+.steps li{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;padding:8px 0;border-bottom:1px solid var(--rule);font-size:15px}
+.steps li i{font-style:normal;width:9px;height:9px;border-radius:50%;margin-top:7px;background:var(--mute)}
+.steps li.bad i{background:var(--red)}.steps li.good i{background:var(--teal)}.steps li.warn i{background:var(--amber)}.steps li.rec i{background:var(--blue)}
+pre{margin:10px 0 0;padding:12px;border-radius:8px;background:light-dark(#14161a,#060a0b);color:#d8e3e5;font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;max-height:300px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere}
+.sub{color:var(--mute);font-size:15px}
+.scroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14.5px}
+th{text-align:left;font-weight:600;color:var(--mute);font-size:13px;padding:8px 8px;border-bottom:1px solid var(--ink)}
+td{padding:9px 8px;border-bottom:1px solid var(--rule);vertical-align:top}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.lv{font-weight:700;font-size:12.5px;padding:2px 8px;border-radius:4px;white-space:nowrap}
+.lv3{background:var(--redbg);color:var(--red)}.lv2{background:var(--amberbg);color:var(--amber)}.lv1{background:var(--tealbg);color:var(--teal)}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;overflow-wrap:anywhere}
+tr.hit td{background:var(--redbg)}
+tr.fix td{background:var(--bluebg)}
+.form{display:flex;flex-wrap:wrap;gap:8px;align-items:end;margin-top:10px}
+.form label{display:flex;flex-direction:column;font-size:13px;color:var(--mute);gap:3px}
+select,input[type=number]{font:16px Inter,system-ui,sans-serif;min-height:44px;padding:6px 10px;border:1px solid var(--rule);border-radius:8px;background:var(--bg);color:var(--ink)}
+input[type=number]{width:9em}
+.verdict{margin-top:10px;font-size:15px;font-weight:600}
+.ok{color:var(--teal)}.no{color:var(--red)}
+footer{color:var(--mute);font-size:13.5px;border-top:1px solid var(--rule)}
+@media(max-width:900px){.lab,.top,.cols{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:600px){.score{grid-template-columns:repeat(2,minmax(0,1fr))}table{font-size:13px}th,td{padding:6px 4px}.stack thead{display:none}.stack tr{display:grid;padding-block:8px;border-bottom:1px solid var(--rule)}.stack td{display:flex;justify-content:space-between;gap:12px;border:0;padding:3px 0;text-align:right}.stack td::before{content:attr(data-l);color:var(--mute);text-align:left;flex:none;max-width:45%}.fig{height:330px}}
+@media(prefers-reduced-motion:reduce){.sw,.sw::after{transition:none}}
+</style>
+</head>
+<body>
+<header class="band"><div class="wrap top">
+  <div>
+    <h1>SafeTrust Bank storage security lab</h1>
+    <p class="lede">A live version of the ISM case study. Launch each attack from the risk register against the bank's storage, switch controls on and off, and see what each one prevents, detects or recovers from. The cryptography is real and runs in your browser.</p>
+  </div>
+  <div>
+    <div class="score" id="score"></div>
+    <p class="sub" id="resid" style="margin-top:8px"></p>
+  </div>
+</div></header>
+
+<main>
+<section class="band"><div class="wrap lab">
+  <div>
+    <div class="fig" id="fig"><svg id="map" role="img" aria-label="SafeTrust Bank storage architecture with attack routes"></svg></div>
+    <div class="status" id="status" aria-live="polite">Pick an attack. Every control starts off, which matches the bank as described in the report.</div>
+    <div class="attacks" id="attacks"></div>
+    <div class="row">
+      <button class="btn" id="runAll">Run all seven attacks</button>
+      <button class="btn ghost" id="reset">Reset the bank</button>
+    </div>
+  </div>
+  <aside class="panel" aria-label="Security controls">
+    <h2>Controls</h2>
+    <p class="sub">Grouped the way Table 5.2 groups them.</p>
+    <div class="presets">
+      <button data-p="none">As found</button>
+      <button data-p="prevent">Prevent only</button>
+      <button data-p="dc">Detect and correct only</button>
+      <button data-p="all">Defense in depth</button>
+    </div>
+    <div id="controls"></div>
+    <div class="totp" id="totp" hidden>Administrator's authenticator (TOTP, RFC 6238)<br><b id="code">------</b> <span class="sub" id="ttl"></span></div>
+  </aside>
+</div></section>
+
+<section class="band" style="background:var(--zone)"><div class="wrap cols">
+  <div>
+    <h2 id="conTitle">Attack console</h2>
+    <p class="sub" id="conSub">Each step of the last attack, as the bank's systems saw it.</p>
+    <ul class="steps" id="steps"><li><i></i><span>No attack run yet.</span></li></ul>
+  </div>
+  <div>
+    <h2>What the attacker got</h2>
+    <p class="sub">Raw evidence captured during the last attack.</p>
+    <pre id="evidence">Nothing captured yet.</pre>
+  </div>
+</div></section>
+
+<section class="band"><div class="wrap">
+  <h2>Risk register, rated live</h2>
+  <p class="sub">The report's ratings (Table 4.3) next to the risk that remains with the current controls. Residual risk drops one level when any preventive control is on, two when all are, and one more when a detective or corrective control is on.</p>
+  <div class="scroll" style="margin-top:10px"><table class="stack" id="reg"></table></div>
+</div></section>
+
+<section class="band" style="background:var(--zone)"><div class="wrap cols">
+  <div>
+    <h2>What LUN 3 holds</h2>
+    <p class="sub" id="lunSub"></p>
+    <div class="scroll" style="margin-top:10px"><table class="stack" id="lun"></table></div>
+  </div>
+  <div>
+    <h2>Transaction ledger</h2>
+    <p class="sub">Every row is sealed with an HMAC-SHA-256 tag when it is written. Integrity alerts compare the tag again.</p>
+    <form class="form" id="txf">
+      <label for="txFrom">From<select id="txFrom"></select></label>
+      <label for="txTo">To<select id="txTo"></select></label>
+      <label for="txAmt">Amount (₹)<input type="number" id="txAmt" min="1" step="1" value="12500"></label>
+      <button class="btn" type="submit">Send transfer</button>
+    </form>
+    <div class="scroll" style="margin-top:10px"><table class="stack" id="ledger"></table></div>
+  </div>
+</div></section>
+
+<section class="band"><div class="wrap">
+  <h2>Audit trail</h2>
+  <p class="sub">With tamper-evident audit on, each entry stores the SHA-256 hash of the one before it, so deleting or editing a line breaks the chain.</p>
+  <div class="row"><button class="btn ghost" id="verify">Verify the hash chain</button></div>
+  <p class="verdict" id="verdict"></p>
+  <div class="scroll" style="margin-top:6px"><table class="stack" id="audit"></table></div>
+</div></section>
+</main>
+
+<footer class="band"><div class="wrap">
+  SafeTrust Bank is fictional and every customer, account and transaction here is sample data. Based on the 21CSE359T Information Storage and Management case study, SRM IST. Uses AES-256-GCM, HMAC-SHA-256, SHA-256 and TOTP through the browser's Web Crypto API.
+</div></footer>
+
+<script>
+{
+const $=id=>document.getElementById(id);
+const RM=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const sleep=ms=>new Promise(r=>setTimeout(r,RM?0:ms));
+const inr=n=>'₹'+Number(n).toLocaleString('en-IN',{maximumFractionDigits:2});
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const hex=b=>[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('');
+const b64=b=>btoa(String.fromCharCode(...new Uint8Array(b)));
+const enc8=s=>new TextEncoder().encode(s);
+const subtle=window.crypto&&crypto.subtle;
+const now=()=>new Date().toLocaleTimeString('en-IN',{hour12:false});
+
+const CONTROLS=[
+ {id:'mfa',g:'Prevent',n:'MFA for administrators',d:'Fixes: weak passwords, no MFA'},
+ {id:'mgmt',g:'Prevent',n:'Private management network',d:'Fixes: exposed management LAN'},
+ {id:'rbac',g:'Prevent',n:'Named accounts and RBAC',d:'Fixes: shared admin accounts, weak permissions'},
+ {id:'zoning',g:'Prevent',n:'Zoning and LUN masking',d:'Fixes: open storage fabric'},
+ {id:'enc',g:'Prevent',n:'Encryption in transit and at rest',d:'Fixes: unencrypted links and tapes'},
+ {id:'filter',g:'Prevent',n:'Traffic filtering and rate limits',d:'Fixes: weak traffic filtering'},
+ {id:'monitor',g:'Detect',n:'Tamper-evident audit and integrity alerts',d:'Fixes: unmonitored audit logs'},
+ {id:'dr',g:'Correct',n:'Backups and DR failover',d:'Restores data and service'}];
+const C={};CONTROLS.forEach(c=>C[c.id]=false);
+
+const NODES={cust:[.13,.2,'WEB','Customers','Customers'],app:[.4,.2,'APP','App + database','App + DB'],fabric:[.66,.2,'FC','Storage fabric','Fabric'],san:[.87,.47,'SAN','SAN / NAS array','SAN'],admin:[.52,.6,'ADM','Admin console','Admin'],backup:[.6,.87,'TAPE','Tape backups','Tapes'],dr:[.87,.87,'DR','Remote DR site','DR site'],att:[.13,.62,'ATK','Attacker','Attacker']};
+const LINKS=[['cust','app'],['app','fabric'],['fabric','san'],['admin','san'],['san','backup'],['san','dr']];
+const ZONES=[[0,.42,'Application access'],[.42,.74,'Management access'],[.74,1,'Backup, replication and DR']];
+
+const S={route:null,blockAt:-1,outcome:null,glow:null,results:{},running:false};
+let accounts,ledger,audit,aesKey,macKey,totpSecret,ctCache=new Map(),txSeq,hitRow=null,fixRow=null;
+
+const SCEN=[
+ {id:'snoop',n:'Snoop on a storage link',goal:'Confidentiality',risk:0},
+ {id:'rogue',n:'Plug in a rogue host',goal:'Confidentiality',risk:0},
+ {id:'modify',n:'Alter a transaction',goal:'Integrity',risk:1},
+ {id:'admin',n:'Spoof the admin console',goal:'Integrity, accountability',risk:2},
+ {id:'dos',n:'Flood the banking portal',goal:'Availability',risk:3},
+ {id:'tape',n:'Steal a backup tape',goal:'Confidentiality',risk:4},
+ {id:'repud',n:'Deny a transfer',goal:'Accountability',risk:null}];
+const RISKS=[
+ {a:'Customer / KYC data',t:'Snooping',v:'Unencrypted paths',g:'Confidentiality',base:3,p:['enc'],dc:[],tests:['snoop','rogue']},
+ {a:'Transaction database',t:'Modification',v:'Weak permissions',g:'Integrity',base:3,p:['rbac'],dc:['monitor','dr'],tests:['modify']},
+ {a:'Admin console',t:'Spoofing / misuse',v:'No MFA; exposed LAN',g:'Integrity + accountability',base:3,p:['mfa','mgmt'],dc:['monitor'],tests:['admin']},
+ {a:'Banking portal',t:'Denial of service',v:'Weak traffic filtering',g:'Availability',base:2,p:['filter'],dc:['dr'],tests:['dos']},
+ {a:'Backup tapes',t:'Media theft',v:'No media encryption',g:'Confidentiality',base:3,p:['enc'],dc:['monitor'],tests:['tape']}];
+const LV=['','Low','Medium','High'];
+const OUT={breached:'Breached',detected:'Detected',recovered:'Recovered',blocked:'Blocked'};
+
+function seed(){
+ accounts=[
+  {id:'C-10231',name:'Ananya Menon',acct:'5512 0098 4471',bal:248310.55,kyc:'PAN AXMPM4821K'},
+  {id:'C-10232',name:'Rahul Iyer',acct:'5512 0098 5520',bal:91240.00,kyc:'PAN BQIPI7712L'},
+  {id:'C-10233',name:'Fatima Shaikh',acct:'5512 0098 6013',bal:1534900.20,kyc:'PAN CRSPS3391M'},
+  {id:'C-10234',name:'Vikram Rao',acct:'5512 0098 7348',bal:15620.75,kyc:'PAN DKRPR5508N'}];
+ ledger=[];audit=[];txSeq=1040;ctCache.clear();hitRow=fixRow=null;
+}
+
+/* ---------- crypto ---------- */
+async function initCrypto(){
+ aesKey=await subtle.generateKey({name:'AES-GCM',length:256},false,['encrypt','decrypt']);
+ macKey=await subtle.generateKey({name:'HMAC',hash:'SHA-256'},false,['sign']);
+ totpSecret=crypto.getRandomValues(new Uint8Array(20));
+}
+async function aes(text){const iv=crypto.getRandomValues(new Uint8Array(12));const ct=await subtle.encrypt({name:'AES-GCM',iv},aesKey,enc8(text));const out=new Uint8Array(12+ct.byteLength);out.set(iv);out.set(new Uint8Array(ct),12);return out.buffer}
+async function mac(t){return hex(await subtle.sign('HMAC',macKey,enc8(JSON.stringify([t.id,t.from,t.to,t.amt,t.ts]))))}
+async function sha(s){return hex(await subtle.digest('SHA-256',enc8(s)))}
+async function totp(offset=0){
+ const key=await subtle.importKey('raw',totpSecret,{name:'HMAC',hash:'SHA-1'},false,['sign']);
+ const ctr=Math.floor(Date.now()/30000)+offset;const buf=new ArrayBuffer(8);const dv=new DataView(buf);dv.setUint32(0,Math.floor(ctr/2**32));dv.setUint32(4,ctr>>>0);
+ const h=new Uint8Array(await subtle.sign('HMAC',key,buf));const o=h[19]&15;
+ const bin=((h[o]&127)<<24)|(h[o+1]<<16)|(h[o+2]<<8)|h[o+3];return String(bin%1e6).padStart(6,'0');
+}
+function dump(buf,max=96){const b=new Uint8Array(buf).slice(0,max);let s='';for(let i=0;i<b.length;i+=16){const row=[...b.slice(i,i+16)];s+=i.toString(16).padStart(4,'0')+'  '+row.map(x=>x.toString(16).padStart(2,'0')).join(' ').padEnd(48)+' '+row.map(x=>x>31&&x<127?String.fromCharCode(x):'.').join('')+'\n'}return s+(buf.byteLength>max?`… ${buf.byteLength-max} more bytes`:'')}
+
+/* ---------- audit + ledger ---------- */
+async function log(actor,src,action,result){
+ const e={ts:new Date().toISOString(),actor,src,action,result,prev:null,hash:null};
+ if(C.monitor){const last=audit[audit.length-1];e.prev=last&&last.hash?last.hash:'GENESIS';e.hash=await sha(e.prev+JSON.stringify([e.ts,e.actor,e.src,e.action,e.result]))}
+ audit.push(e);renderAudit();return e;
+}
+async function verifyChain(){
+ for(let i=0;i<audit.length;i++){const e=audit[i];if(!e.hash)continue;const p=i>0&&audit[i-1].hash?audit[i-1].hash:'GENESIS';
+  if(e.prev!==p)return{ok:false,at:i,why:'its stored link does not match the entry before it'};
+  if(await sha(e.prev+JSON.stringify([e.ts,e.actor,e.src,e.action,e.result]))!==e.hash)return{ok:false,at:i,why:'its contents no longer match its hash'}}
+ return{ok:true,n:audit.filter(e=>e.hash).length};
+}
+async function transfer(from,to,amt,actor){
+ const t={id:'T-'+(txSeq++),from,to,amt:Number(amt),ts:new Date().toISOString()};
+ t.tag=await mac(t);t.good={amt:t.amt,tag:t.tag};ledger.push(t);
+ const a=accounts.find(x=>x.id===from),b=accounts.find(x=>x.id===to);if(a&&b){a.bal-=t.amt;b.bal+=t.amt}
+ await log(actor||('cust:'+from),'mobile app','Transfer '+t.id+' '+inr(t.amt)+' to '+to,'OK');return t;
+}
+
+/* ---------- map ---------- */
+const svg=$('map');
+function draw(){
+ const W=svg.clientWidth,H=svg.clientHeight;if(!W)return;const sm=W<520;
+ const P=k=>[NODES[k][0]*W,NODES[k][1]*H];
+ let h=ZONES.map((z,i)=>`<rect x="0" y="${z[0]*H}" width="${W}" height="${(z[1]-z[0])*H}" fill="${i%2?'var(--bg)':'var(--zone)'}"/><text x="10" y="${z[0]*H+18}" fill="var(--mute)" style="fill:var(--mute)">${z[2]}</text>`).join('');
+ h+=LINKS.map(([a,b])=>{const[x1,y1]=P(a),[x2,y2]=P(b);return`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="var(--rule)" stroke-width="3"/>`}).join('');
+ const col={breached:'var(--red)',detected:'var(--amber)',recovered:'var(--blue)',blocked:'var(--teal)'};
+ if(S.route){
+  const pts=S.route.map(P);const end=S.blockAt>=0?S.blockAt:pts.length-1;
+  const live=pts.slice(0,end+1).map(p=>p.join(',')).join(' ');
+  h+=`<polyline points="${live}" fill="none" stroke="var(--red)" stroke-width="3.5" stroke-dasharray="8 6" stroke-linecap="round">${RM?'':'<animate attributeName="stroke-dashoffset" from="28" to="0" dur=".7s" repeatCount="indefinite"/>'}</polyline>`;
+  if(S.blockAt>=0&&S.blockAt<pts.length-1){const rest=pts.slice(end).map(p=>p.join(',')).join(' ');h+=`<polyline points="${rest}" fill="none" stroke="var(--mute)" stroke-width="2" stroke-dasharray="2 6" opacity=".6"/>`}
+  if(S.outcome){const[x,y]=pts[end];h+=`<circle cx="${x}" cy="${y}" r="${sm?27:31}" fill="none" stroke="${col[S.outcome]}" stroke-width="4"/>`}
+ }
+ if(S.glow){const[x,y]=P(S.glow);h+=`<circle cx="${x}" cy="${y}" r="${sm?27:31}" fill="none" stroke="var(--blue)" stroke-width="4" stroke-dasharray="4 4"/>`}
+ h+=Object.entries(NODES).map(([k,n])=>{const[x,y]=P(k);const w=sm?40:48,hh=sm?28:32;const att=k==='att';
+  return`<rect x="${x-w/2}" y="${y-hh/2}" width="${w}" height="${hh}" rx="7" fill="${att?'var(--red)':'var(--ink)'}"/><text x="${x}" y="${y+4.5}" text-anchor="middle" style="fill:var(--bg);stroke:none;font-weight:700;font-size:12px">${n[2]}</text><text x="${x}" y="${y+hh/2+17}" text-anchor="middle">${sm?n[4]:n[3]}</text>`}).join('');
+ svg.innerHTML=h;
+}
+const mapRO=new ResizeObserver(draw);mapRO.observe(svg);
+
+/* ---------- UI render ---------- */
+function renderControls(){
+ let g='';$('controls').innerHTML=CONTROLS.map(c=>{const head=c.g!==g?`<h3>${c.g}</h3>`:'';g=c.g;
+  return head+`<label class="tg" for="c-${c.id}"><input type="checkbox" id="c-${c.id}" data-c="${c.id}" ${C[c.id]?'checked':''}><span class="sw"></span><span>${c.n}<em>${c.d}</em></span></label>`}).join('');
+ $('totp').hidden=!C.mfa;
+}
+function renderAttacks(){
+ $('attacks').innerHTML=SCEN.map(s=>{const r=S.results[s.id];return`<button class="atk" data-a="${s.id}" ${S.running?'disabled':''}><strong>${s.n}</strong><small>${s.goal}</small><span class="chip ${r?'c-'+r:'c-none'}">${r?OUT[r]:'Not run'}</span></button>`}).join('');
+ $('runAll').disabled=$('reset').disabled=S.running;
+}
+function residual(r){let l=r.base;const on=r.p.filter(k=>C[k]).length;if(on===r.p.length)l-=2;else if(on)l-=1;if(r.dc.some(k=>C[k]))l-=1;return Math.max(1,l)}
+function renderScore(){
+ const vals=Object.values(S.results);const cnt=k=>vals.filter(v=>v===k).length;
+ $('score').innerHTML=[['breached','s-br'],['detected','s-de'],['recovered','s-re'],['blocked','s-bl']].map(([k,c])=>`<div class="${c}"><b>${cnt(k)}</b><span>${OUT[k]}</span></div>`).join('');
+ const res=RISKS.map(residual);const n=l=>res.filter(x=>x===l).length;
+ $('resid').textContent=`Residual risk now: ${n(3)} High, ${n(2)} Medium, ${n(1)} Low (the report starts at 4 High, 1 Medium).`;
+}
+function renderRegister(){
+ $('reg').innerHTML=`<thead><tr><th>Asset</th><th>Threat</th><th>Vulnerability</th><th>Goal affected</th><th>Report</th><th>Live</th><th>Last test</th></tr></thead><tbody>`+RISKS.map(r=>{const l=residual(r);const t=r.tests.map(id=>S.results[id]).filter(Boolean);
+  const last=t.length?t.map(o=>`<span class="chip c-${o}">${OUT[o]}</span>`).join(' '):'<span class="chip c-none">Not run</span>';
+  return`<tr><td data-l="Asset">${r.a}</td><td data-l="Threat">${r.t}</td><td data-l="Vulnerability">${r.v}</td><td data-l="Goal">${r.g}</td><td data-l="Report"><span class="lv lv${r.base}">${LV[r.base].toUpperCase()}</span></td><td data-l="Live"><span class="lv lv${l}">${LV[l].toUpperCase()}</span></td><td data-l="Last test">${last}</td></tr>`}).join('')+'</tbody>';
+}
+async function renderLun(){
+ $('lunSub').textContent=C.enc?'Encryption is on: the array stores AES-256-GCM ciphertext, so a stolen disk, tape or captured frame shows only this.':'Encryption is off: the array stores customer records in plain text, exactly as a snooper or rogue host would read them.';
+ const rows=await Promise.all(accounts.map(async a=>{const plain=JSON.stringify({id:a.id,name:a.name,acct:a.acct,kyc:a.kyc});
+  if(!C.enc)return`<tr><td data-l="Record">${a.id}</td><td data-l="Name">${esc(a.name)}</td><td data-l="KYC">${a.kyc}</td><td data-l="Balance" class="n">${inr(a.bal)}</td></tr>`;
+  if(!ctCache.has(plain))ctCache.set(plain,b64(await aes(plain)));
+  return`<tr><td data-l="Record" class="n" style="text-align:left">${a.id}</td><td data-l="Stored bytes" colspan="3" class="mono">${ctCache.get(plain).slice(0,64)}…</td></tr>`}));
+ $('lun').innerHTML=(C.enc?'<thead><tr><th>Record</th><th colspan="3">Stored bytes (base64)</th></tr></thead>':'<thead><tr><th>Record</th><th>Name</th><th>KYC</th><th class="n">Balance</th></tr></thead>')+'<tbody>'+rows.join('')+'</tbody>';
+}
+function renderLedger(){
+ const nm=id=>(accounts.find(a=>a.id===id)||{name:id}).name.split(' ')[0];
+ $('ledger').innerHTML='<thead><tr><th>ID</th><th>From → to</th><th class="n">Amount</th><th>HMAC tag</th></tr></thead><tbody>'+ledger.slice(-6).reverse().map(t=>`<tr class="${t.id===hitRow?'hit':t.id===fixRow?'fix':''}"><td data-l="ID">${t.id}</td><td data-l="From → to">${nm(t.from)} → ${nm(t.to)}</td><td data-l="Amount" class="n">${inr(t.amt)}</td><td data-l="Tag" class="mono">${t.tag.slice(0,12)}…</td></tr>`).join('')+'</tbody>';
+}
+function renderAudit(){
+ $('audit').innerHTML='<thead><tr><th>Time</th><th>Actor</th><th>Source</th><th>Action</th><th>Result</th><th>Hash</th></tr></thead><tbody>'+audit.slice(-10).reverse().map(e=>`<tr><td data-l="Time" class="n">${new Date(e.ts).toLocaleTimeString('en-IN',{hour12:false})}</td><td data-l="Actor">${esc(e.actor)}</td><td data-l="Source">${esc(e.src)}</td><td data-l="Action">${esc(e.action)}</td><td data-l="Result">${esc(e.result)}</td><td data-l="Hash" class="mono">${e.hash?e.hash.slice(0,10)+'…':'not chained'}</td></tr>`).join('')+'</tbody>';
+}
+function renderSelects(){const o=accounts.map(a=>`<option value="${a.id}">${esc(a.name)}</option>`).join('');$('txFrom').innerHTML=o;$('txTo').innerHTML=o;$('txTo').selectedIndex=1}
+function renderAll(){renderControls();renderAttacks();renderScore();renderRegister();renderLun();renderLedger();renderAudit();draw()}
+
+/* ---------- attack engine ---------- */
+let steps=[];
+function step(cls,txt){steps.push([cls,txt]);$('steps').innerHTML=steps.map(([c,t])=>`<li class="${c}"><i></i><span>${t}</span></li>`).join('')}
+function evid(t){$('evidence').textContent=t}
+
+const RUN={
+ async snoop(){
+  S.route=['att','fabric'];draw();step('','Attacker taps the iSCSI link between the app servers and the array (port mirror on a shared switch).');await sleep(500);
+  const a=accounts[0];const plain=JSON.stringify({id:a.id,name:a.name,acct:a.acct,kyc:a.kyc,bal:a.bal});
+  const head='iSCSI  SCSI Data-In  LUN 3  LBA 0x0004A2F0  10.10.2.14 → 10.10.9.3\n';
+  if(C.enc){const ct=await aes(plain);evid(head+'Payload (AES-256-GCM, '+ct.byteLength+' bytes)\n'+dump(ct));step('good','Frame captured, but the payload is AES-256-GCM ciphertext. Without the key in the key manager it is useless.');await log('unknown','span port','Mirror session on storage VLAN','captured ciphertext');return{o:'blocked',at:1,why:'encryption in transit'}}
+  evid(head+'Payload (plain text)\n'+plain);step('bad','Frame captured in plain text: name, account number, KYC and balance are readable.');await log('unknown','span port','Mirror session on storage VLAN','captured plain text');return{o:'breached',at:1}
+ },
+ async rogue(){
+  S.route=['att','fabric','san'];draw();step('','Attacker connects a laptop with an HBA to a spare fabric port and spoofs WWN 21:00:00:24:ff:4c:9a:11.');await sleep(500);
+  if(C.zoning){step('good','Fabric login accepted, but the WWN is in no zone. Port login to the array is refused, and LUN 3 is masked to the two app servers only.');evid('switch# show zone active vsan 10\nzone ZN_APP01_ARRAY  21:00:00:24:ff:31:02:aa  50:06:01:60:3b:a0:11:1f\nzone ZN_APP02_ARRAY  21:00:00:24:ff:31:02:ab  50:06:01:60:3b:a0:11:1f\n\nPLOGI 21:00:00:24:ff:4c:9a:11 -> 50:06:01:60:3b:a0:11:1f  REJECTED (not zoned)\narray: LUN 3 masking group = {app01, app02}');await log('fabric','fc-sw-02 port 14','FLOGI by unknown WWN','PLOGI rejected');if(C.monitor)step('warn','Alert raised: unknown initiator logged in to fabric port 14.');return{o:'blocked',at:1,why:'zoning and LUN masking'}}
+  step('bad','No zoning or masking: the rogue host sees and mounts LUN 3.');await sleep(400);
+  let o='breached',at=2;
+  if(C.enc){const ct=await aes(JSON.stringify(accounts));evid('lsblk -> /dev/sdc  2.0T  (SafeTrust LUN 3)\ndd if=/dev/sdc bs=512 count=1 | xxd\n'+dump(ct));step('good','But the volume is encrypted at rest, so the attacker reads only ciphertext.');o='blocked'}
+  else{evid('lsblk -> /dev/sdc  2.0T  (SafeTrust LUN 3)\nstrings /dev/sdc | head\n'+accounts.map(a=>`${a.id}|${a.name}|${a.acct}|${a.kyc}|${a.bal}`).join('\n'));step('bad','Customer records copied off the array.')}
+  await log('unknown','fc-sw-02 port 14','Mounted LUN 3',o==='blocked'?'ciphertext only':'data read');
+  if(C.monitor){step('warn','Alert raised: unknown initiator read LUN 3. Security team paged.');if(o==='breached')o='detected'}
+  return{o,at,why:o==='blocked'?'encryption at rest':''}
+ },
+ async modify(){
+  S.route=['att','app','fabric','san'];draw();if(!ledger.length)await transfer('C-10232','C-10233',5000);
+  const t=ledger[0];step('',`Attacker uses the stolen portal service account svc_portal to change ${t.id} from ${inr(t.amt)} to ${inr(500000)}.`);await sleep(500);
+  if(C.rbac){step('good','RBAC: svc_portal may only SELECT and INSERT on the ledger. UPDATE is denied.');evid(`SQL> UPDATE ledger SET amount=500000 WHERE id='${t.id}';\nERROR: permission denied for table ledger (role svc_portal: SELECT, INSERT)`);await log('svc_portal','10.10.2.14','UPDATE ledger '+t.id,'DENIED');return{o:'blocked',at:1,why:'least-privilege RBAC'}}
+  t.amt=500000;hitRow=t.id;fixRow=null;renderLedger();step('bad',`Row ${t.id} rewritten to ${inr(500000)}. The old value is gone from the live database.`);await log('svc_portal','10.10.2.14','UPDATE ledger '+t.id,'OK');await sleep(400);
+  const now2=await mac(t);evid(`SQL> UPDATE ledger SET amount=500000 WHERE id='${t.id}';\n1 row updated.\n\nstored tag   ${t.tag}\nrecomputed   ${now2}\n${now2===t.tag?'MATCH':'MISMATCH'}`);
+  if(!C.monitor){step('bad','Nobody compares the HMAC tags, so the change goes unnoticed.');return{o:'breached',at:3}}
+  step('warn','Integrity check: recomputed HMAC does not match the stored tag. Alert raised.');await log('integrity-svc','soc','HMAC mismatch on '+t.id,'ALERT');
+  if(!C.dr)return{o:'detected',at:3};
+  await sleep(400);t.amt=t.good.amt;hitRow=null;fixRow=t.id;renderLedger();step('rec',`Row restored from last night's backup snapshot to ${inr(t.amt)}, and the tag verifies again.`);await log('dba.k.nair','backup','Restore '+t.id+' from snapshot','OK');return{o:'recovered',at:3}
+ },
+ async admin(){
+  S.route=['att','admin','san'];draw();step('','Attacker on the general office LAN (10.20.4.77) opens the storage admin console with a phished password.');await sleep(500);
+  if(C.mgmt){step('good','The console is only reachable from the management VLAN through the jump host. Connection dropped.');evid('10.20.4.77:51544 -> 172.16.99.10:443  DROP  (acl MGMT-ONLY: permit 172.16.99.0/24 via jump01)');await log('firewall','10.20.4.77','Connect to storage console','DROPPED');return{o:'blocked',at:1,why:'private management network'}}
+  step('bad','Console reachable from the office LAN. Password accepted.');await sleep(400);
+  const user=C.rbac?'r.iyer':'admin';
+  if(C.mfa){const real=await totp();const guess='000000';step('good',`Second factor required. Attacker enters ${guess}; the valid code was ${real}. Login refused.`);evid(`POST /login user=${user}  password=OK\nTOTP expected ${real}, got ${guess}  -> 401 MFA_FAILED`);await log(user,'10.20.4.77','Console login','MFA FAILED');if(C.monitor)step('warn','Alert raised: correct password with failed MFA from a non-admin subnet. Password reset forced.');return{o:'blocked',at:1,why:'MFA'}}
+  step('bad',`Logged in as "${user}". Attacker removes LUN masking from LUN 3 and exports a snapshot.`);evid(`POST /login user=${user}  password=OK  -> 200\nstorage> lun-mask remove LUN3 --all\nstorage> snapshot export LUN3 nfs://10.20.4.77/x`);
+  await log(user,'10.20.4.77','Remove LUN 3 masking; export snapshot','OK');await sleep(400);
+  if(!C.monitor){step('bad',C.rbac?'Nobody watches the logs, so the change stays in place.':'Nobody watches the logs, and "admin" is shared by four staff, so no one can say who did it.');return{o:'breached',at:2}}
+  step('warn',C.rbac?'Alert: admin login from a non-admin subnet plus a masking change. The session belongs to named account r.iyer, which is suspended at once.':'Alert raised, but the shared "admin" account is used by four staff, so the action cannot be traced to a person.');
+  if(C.dr){await sleep(300);step('rec','Masking configuration restored from the nightly config backup, and the exported snapshot is revoked.');await log('soc','backup','Restore array config','OK');return{o:'recovered',at:2}}
+  return{o:'detected',at:2}
+ },
+ async dos(){
+  S.route=['att','cust','app'];draw();step('','Botnet sends 14,000 requests per second at the login page. The portal can serve about 2,500.');await sleep(500);
+  if(C.filter){step('good','Edge rate limit (50 requests per second per IP) and bot filtering drop 96% of the flood. Login stays at about 180 ms.');evid('edge: rx 14,000 req/s  dropped 13,440  passed 560\nportal: p95 latency 182 ms  availability 99.9%');await log('waf','edge','Rate limit triggered','13,440 req/s dropped');return{o:'blocked',at:1,why:'traffic filtering'}}
+  step('bad','Portal threads exhausted. Customers see time-outs.');await sleep(400);
+  if(C.dr){S.glow='dr';draw();step('rec','Health checks fail, so traffic moves to the replicated DR site, which serves customers again in about 40 seconds.');evid('portal-dc1: 503 for 38 s\nGSLB: failover to dr-site (replication lag 4 s)\nportal-dr: availability restored');await log('gslb','dc1','Failover to DR site','OK');return{o:'recovered',at:2}}
+  evid('portal-dc1: 503 Service Unavailable\navailability 0% for 47 min (until the flood stopped)');await log('portal','dc1','Health check','FAILED');
+  if(C.monitor){step('warn','Alert raised on the traffic spike, but there is nowhere to send customers.');return{o:'detected',at:2}}
+  return{o:'breached',at:2}
+ },
+ async tape(){
+  S.route=['att','backup'];draw();step('','Backup tape TAPE-0427 goes missing between the data centre and the offsite vault.');await sleep(500);
+  const data=JSON.stringify(accounts);
+  if(C.enc){const ct=await aes(data);evid('tar -tvf /dev/st0\n'+dump(ct));step('good','The tape was written with AES-256 hardware encryption. Its contents are unreadable without the key.');await log('vault','courier','TAPE-0427 missing','encrypted');if(C.monitor)step('warn','Media tracking flags the tape as not checked in at the vault.');return{o:'blocked',at:1,why:'media encryption'}}
+  evid('tar -xvf /dev/st0 accounts.csv && cat accounts.csv\n'+accounts.map(a=>`${a.id},${a.name},${a.acct},${a.kyc},${a.bal}`).join('\n'));step('bad','Tape restored on a second-hand drive: full customer and KYC records readable.');await log('vault','courier','TAPE-0427 missing','plain text');
+  if(C.monitor){step('warn','Media tracking flags the missing tape the same day, so customers and the regulator can be told quickly. The data is still exposed.');return{o:'detected',at:1}}
+  return{o:'breached',at:1}
+ },
+ async repud(){
+  S.route=['att','admin','san'];draw();
+  const t=await transfer('C-10231','C-10234',48000);renderLedger();renderLun();step('',`Ananya Menon sends ${inr(48000)} to Vikram Rao (${t.id}). Later she says she never made it, and a colluding insider deletes the log entry.`);await sleep(500);
+  const idx=audit.findIndex(e=>e.action.startsWith('Transfer '+t.id));const removed=audit.splice(idx,1)[0];renderAudit();step('bad','Audit entry for '+t.id+' deleted from the log server.');await sleep(400);
+  if(!C.monitor){evid('rm entry: '+JSON.stringify(removed,null,1)+'\n\nThe log is a plain file with no chain. Nothing shows a line is missing.');step('bad','No proof the transfer happened. The bank cannot refute the claim.');return{o:'breached',at:2}}
+  const v=await verifyChain();evid(`chain verification: ${v.ok?'OK':'BROKEN at entry '+(v.at+1)+': '+v.why}\nmissing entry hash ${removed.hash}`);
+  step('warn','Hash chain verification fails at the next entry, so the deletion is exposed.');await sleep(300);
+  audit.splice(idx,0,removed);renderAudit();const v2=await verifyChain();step('good',`Entry restored from the write-once copy and the chain verifies again (${v2.ok?v2.n+' entries':'still broken'}). The transfer is proven and the claim is refuted.`);
+  return{o:'blocked',at:2,why:'tamper-evident audit'}
+ }};
+
+async function runOne(id){
+ const s=SCEN.find(x=>x.id===id);steps=[];S.outcome=null;S.glow=null;S.blockAt=-1;
+ $('conTitle').textContent=s.n;$('conSub').textContent='Goal at risk: '+s.goal+'. Started '+now()+'.';evid('Running…');
+ $('status').textContent='Running: '+s.n+'…';
+ const r=await RUN[id]();S.blockAt=r.at;S.outcome=r.o;S.results[id]=r.o;draw();
+ const msg={breached:'Breached. The attack succeeded and nothing noticed.',detected:'Detected, but only after harm was done.',recovered:'Recovered. Harm was detected and reversed.',blocked:'Blocked'+(r.why?' by '+r.why:'')+'.'}[r.o];
+ $('status').innerHTML=`<span class="chip c-${r.o}">${OUT[r.o]}</span> ${esc(s.n)}: ${esc(msg)}`;
+ renderAttacks();renderScore();renderRegister();renderLedger();renderAudit();renderLun();
+}
+async function guarded(fn){if(S.running)return;S.running=true;renderAttacks();try{await fn()}catch(e){$('status').textContent='Something went wrong: '+e.message}S.running=false;renderAttacks()}
+
+/* ---------- events ---------- */
+$('attacks').addEventListener('click',e=>{const b=e.target.closest('[data-a]');if(b)guarded(()=>runOne(b.dataset.a))});
+$('runAll').addEventListener('click',()=>guarded(async()=>{for(const s of SCEN){await runOne(s.id);await sleep(900)}$('status').innerHTML+=' <span class="sub">All seven attacks finished.</span>'}));
+$('controls').addEventListener('change',async e=>{const k=e.target.dataset.c;if(!k)return;C[k]=e.target.checked;$('totp').hidden=!C.mfa;
+ await log('ciso.office','policy',(C[k]?'Enabled ':'Disabled ')+CONTROLS.find(c=>c.id===k).n,'OK');renderScore();renderRegister();renderLun()});
+document.querySelector('.presets').addEventListener('click',async e=>{const p=e.target.dataset.p;if(!p)return;
+ CONTROLS.forEach(c=>C[c.id]=p==='all'||(p==='prevent'&&c.g==='Prevent')||(p==='dc'&&c.g!=='Prevent'));renderControls();
+ await log('ciso.office','policy','Applied preset: '+e.target.textContent,'OK');renderScore();renderRegister();renderLun()});
+$('reset').addEventListener('click',()=>guarded(async()=>{seed();S.results={};S.route=null;S.outcome=null;S.glow=null;steps=[];$('steps').innerHTML='<li><i></i><span>No attack run yet.</span></li>';evid('Nothing captured yet.');$('verdict').textContent='';await baseline();renderAll();$('status').textContent='Bank reset. Controls are kept as you set them.'}));
+$('txf').addEventListener('submit',async e=>{e.preventDefault();const f=$('txFrom').value,t=$('txTo').value,a=Number($('txAmt').value);
+ if(f===t||!(a>0)){$('verdict').textContent='';$('status').textContent='Pick two different customers and an amount above zero.';return}
+ await transfer(f,t,a);hitRow=fixRow=null;renderLedger();renderLun();$('status').textContent='Transfer logged and sealed with an HMAC tag.'});
+$('verify').addEventListener('click',async()=>{const v=await verifyChain();const el=$('verdict');
+ if(!audit.some(e=>e.hash)){el.className='verdict no';el.textContent='No chained entries yet. Turn on tamper-evident audit, then make a transfer or run an attack.';return}
+ el.className='verdict '+(v.ok?'ok':'no');el.textContent=v.ok?`Chain intact: ${v.n} chained entries verified.`:`Chain broken at entry ${v.at+1}: ${v.why}.`});
+
+async function tick(){if(!C.mfa)return;$('code').textContent=(await totp()).replace(/(\d{3})/,'$1 ');$('ttl').textContent='refreshes in '+(30-Math.floor(Date.now()/1000)%30)+' s'}
+async function baseline(){await transfer('C-10232','C-10233',5000,'cust:C-10232');await transfer('C-10233','C-10231',22750,'cust:C-10233');await transfer('C-10234','C-10232',1200,'cust:C-10234')}
+
+async function start(){
+ if(!subtle){$('status').textContent='This browser does not offer Web Crypto, so the lab cannot run. Open it over https in a current browser.';return}
+ seed();await initCrypto();await baseline();renderSelects();renderAll();tick();setInterval(tick,1000);
+}
+start();
+}
+</script>
+</body>
+</html>
